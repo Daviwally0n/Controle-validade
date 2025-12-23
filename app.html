@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+
+  <meta charset="utf-8">
+  <title>Controle de Validades</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#343a40">
+
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+
+  <!-- Proteção -->
+  <script>
+    if (localStorage.getItem("auth") !== "true") {
+      window.location.href = "index.html";
+    }
+  </script>
+
+</head>
+
+<body class="container py-3">
+
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5>Controle de Validades</h5>
+    <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
+  </div>
+
+  <p>Usuário: <strong id="usuarioLogado"></strong></p>
+
+  <!-- Scanner -->
+  <div class="text-center my-3">
+    <button class="btn btn-primary" onclick="iniciarScanner()">📷 Escanear Produto</button>
+  </div>
+
+  <div id="scanner" class="mb-3"></div>
+
+  <!-- Lista -->
+  <table class="table table-bordered">
+    <thead class="thead-dark">
+      <tr>
+        <th>Produto</th>
+        <th>Qtd</th>
+        <th>Validade</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody id="listaProdutos"></tbody>
+  </table>
+
+  <button class="btn btn-success btn-block mt-3" onclick="exportarPDF()">
+    Exportar PDF
+  </button>
+
+  <!-- LIBS -->
+  <script src="https://unpkg.com/quagga/dist/quagga.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- APP -->
+  <script src="js/app.js"></script>
+
+  <!-- SERVICE WORKER -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+
+</body>
+</html>

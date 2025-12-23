@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <title>Login | Controle de Validades</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#343a40">
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+
+  <body class="img js-fullheight" style="background-image: url(images/armazem.jpg);">
+
+    <section class="ftco-section">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-md-6 col-lg-4">
+            <div class="login-wrap p-0">
+              <h3 class="mb-4 text-center">Sistema de Validades</h3>
+
+              <form action="#" class="signin-form">
+                <div class="form-group">
+                  <input type="text" class="form-control" placeholder="Usuário" required>
+                </div>
+
+                <div class="form-group">
+                  <input id="password-field" type="password" class="form-control" placeholder="Senha" required>
+                  <span toggle="#password-field" class="fa fa-fw fa-eye field-icon toggle-password"></span>
+                </div>
+
+                <div class="form-group">
+                  <button type="submit" class="form-control btn btn-primary submit px-3">
+                    Entrar
+                  </button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RODAPÉ -->
+    <div style="
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      color: #ffffff;
+      font-size: 12px;
+      opacity: 0.8;
+    ">
+      Todos os Direitos Reservados a DAVI WALLYSON MARQUES
+    </div>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/popper.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/alertify.js"></script>
+    <script src="js/login.js"></script>
+
+    <!-- SERVICE WORKER (PWA) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js")
+          .then(() => console.log("Service Worker registrado"))
+          .catch(err => console.error("Erro no SW:", err));
+      }
+    </script>
+
+  </body>
+</html>
