@@ -1,158 +1,181 @@
-let produtos = [];
 let scannerAtivo = false;
+let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
 
-// Mostrar usuário logado
 document.addEventListener("DOMContentLoaded", () => {
-  const user = localStorage.getItem("usuario");
-  if (user) {
-    document.getElementById("usuarioLogado").innerText = user;
-  }
-  carregarLista();
+  document.getElementById("usuarioLogado").innerText =
+    localStorage.getItem("usuario") || "";
+
+  renderizarLista();
 });
 
-// LOGOUT
-function logout() {
-  firebase.auth().signOut().then(() => {
-    window.location.href = "index.html";
-  });
-}
-
-// INICIAR SCANNER
+/* =========================
+   SCANNER REAL (QUAGGA)
+========================= */
 function iniciarScanner() {
   if (scannerAtivo) return;
+
   scannerAtivo = true;
+
+  const scanner = document.getElementById("scanner");
+  scanner.innerHTML = "";
+  scanner.style.height = "300px";
 
   Quagga.init({
     inputStream: {
       type: "LiveStream",
-      target: document.querySelector("#scanner"),
+      target: scanner,
       constraints: {
-        facingMode: "environment"
+        facingMode: "environment",
+        width: { ideal: 640 },
+        height: { ideal: 480 }
       }
     },
+    locator: {
+      patchSize: "medium",
+      halfSample: true
+    },
     decoder: {
-      readers: ["ean_reader", "ean_13_reader", "code_128_reader"]
-    }
+      readers: ["ean_reader", "ean_13_reader"]
+    },
+    locate: true
   }, err => {
     if (err) {
-      alert("Erro ao iniciar câmera");
+      alert("Erro ao acessar a câmera");
+      scannerAtivo = false;
       return;
     }
     Quagga.start();
   });
 
-  Quagga.onDetected(onDetectado);
+  Quagga.onDetected(dados => {
+    const codigo = dados.codeResult.code;
+
+    if (codigo.length < 8) return;
+
+    Quagga.stop();
+    scannerAtivo = false;
+
+    buscarProduto(codigo);
+  });
 }
 
-// QUANDO DETECTAR O CÓDIGO
-async function onDetectado(data) {
-  Quagga.stop();
-  Quagga.offDetected(onDetectado);
-  scannerAtivo = false;
-
-  const codigo = data.codeResult.code;
-  buscarProdutoEAN(codigo);
-}
-
-// BUSCAR PRODUTO NAS APIs EAN PICTURES
-async function buscarProdutoEAN(codigo) {
+/* =========================
+   BUSCA PRODUTO (EAN API)
+========================= */
+async function buscarProduto(codigo) {
   try {
-    const imgURL = `http://www.eanpictures.com.br:9000/api/gtin/${codigo}`;
-    const descResp = await fetch(`http://www.eanpictures.com.br:9000/api/descricao/${codigo}`);
-    const descData = await descResp.json();
+    const [imgRes, descRes] = await Promise.all([
+      fetch(`http://www.eanpictures.com.br:9000/api/gtin/${codigo}`),
+      fetch(`http://www.eanpictures.com.br:9000/api/descricao/${codigo}`)
+    ]);
 
-    const descricao = descData.descricao || "Descrição não encontrada";
+    const imagem = imgRes.ok ? await imgRes.text() : "";
+    const descricao = descRes.ok ? await descRes.text() : "Produto não identificado";
 
-    adicionarProduto({
-      codigo,
-      descricao,
-      imagem: imgURL,
-      quantidade: "",
-      validade: ""
-    });
+    adicionarProduto(codigo, descricao, imagem);
 
   } catch (e) {
-    alert("Erro ao buscar produto");
+    alert("Erro ao consultar produto");
   }
 }
 
-// ADICIONAR PRODUTO À LISTA
-function adicionarProduto(produto) {
-  produtos.push(produto);
-  salvarLista();
+/* =========================
+   ADICIONAR PRODUTO
+========================= */
+function adicionarProduto(codigo, descricao, imagem) {
+  produtos.push({
+    codigo,
+    descricao,
+    imagem,
+    quantidade: "",
+    validade: ""
+  });
+
+  salvar();
   renderizarLista();
 }
 
-// RENDERIZAR LISTA
+/* =========================
+   RENDERIZA LISTA
+========================= */
 function renderizarLista() {
   const tbody = document.getElementById("listaProdutos");
   tbody.innerHTML = "";
 
-  produtos.forEach((p, index) => {
-    tbody.innerHTML += `
-      <tr>
-        <td>
-          <img src="${p.imagem}" style="width:60px; display:block; margin-bottom:5px">
-          <small>${p.descricao}</small>
-        </td>
-        <td>
-          <input type="number" class="form-control"
-            value="${p.quantidade}"
-            onchange="atualizarCampo(${index}, 'quantidade', this.value)">
-        </td>
-        <td>
-          <input type="date" class="form-control"
-            value="${p.validade}"
-            onchange="atualizarCampo(${index}, 'validade', this.value)">
-        </td>
-        <td>
-          <button class="btn btn-danger btn-sm" onclick="removerProduto(${index})">X</button>
-        </td>
-      </tr>
+  produtos.forEach((p, i) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>
+        ${p.imagem ? `<img src="${p.imagem}" width="60"><br>` : ""}
+        ${p.descricao}
+      </td>
+      <td>
+        <input type="number" class="form-control"
+          value="${p.quantidade}"
+          onchange="atualizar(${i}, 'quantidade', this.value)">
+      </td>
+      <td>
+        <input type="date" class="form-control"
+          value="${p.validade}"
+          onchange="atualizar(${i}, 'validade', this.value)">
+      </td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="remover(${i})">
+          ✕
+        </button>
+      </td>
     `;
+
+    tbody.appendChild(tr);
   });
 }
 
-// ATUALIZAR CAMPOS
-function atualizarCampo(index, campo, valor) {
-  produtos[index][campo] = valor;
-  salvarLista();
+/* =========================
+   ATUALIZA / REMOVE
+========================= */
+function atualizar(i, campo, valor) {
+  produtos[i][campo] = valor;
+  salvar();
 }
 
-// REMOVER
-function removerProduto(index) {
-  produtos.splice(index, 1);
-  salvarLista();
+function remover(i) {
+  produtos.splice(i, 1);
+  salvar();
   renderizarLista();
 }
 
-// SALVAR OFFLINE
-function salvarLista() {
+function salvar() {
   localStorage.setItem("produtos", JSON.stringify(produtos));
 }
 
-// CARREGAR OFFLINE
-function carregarLista() {
-  const data = localStorage.getItem("produtos");
-  if (data) {
-    produtos = JSON.parse(data);
-    renderizarLista();
-  }
-}
-
-// EXPORTAR PDF
+/* =========================
+   PDF PROFISSIONAL
+========================= */
 function exportarPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  const pdf = new jsPDF();
 
-  let y = 10;
-  doc.text("Controle de Validades", 10, y);
-  y += 10;
+  pdf.setFontSize(14);
+  pdf.text("Controle de Validades", 10, 10);
+
+  let y = 20;
 
   produtos.forEach(p => {
-    doc.text(`${p.descricao} | Qtd: ${p.quantidade} | Val: ${p.validade}`, 10, y);
-    y += 8;
+    pdf.setFontSize(10);
+    pdf.text(`Produto: ${p.descricao}`, 10, y);
+    pdf.text(`Qtd: ${p.quantidade} | Validade: ${p.validade}`, 10, y + 6);
+    y += 15;
   });
 
-  doc.save("controle-validade.pdf");
+  pdf.save("controle-validade.pdf");
 }
+
+/* =========================
+   LOGOUT
+========================= */
+function logout() {
+  localStorage.clear();
+  window.location.href = "index.html";
+}
+
