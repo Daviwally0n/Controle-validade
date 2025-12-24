@@ -1,95 +1,103 @@
-let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
-let detector;
-let stream;
+/***********************
+ * CONFIGURAÇÃO PROXY *
+ ***********************/
+const PROXY_BASE = "https://ean-proxy.vercel.app/api/ean";
 
+/***********************
+ * ESTADO GLOBAL *
+ ***********************/
+let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+let detector = null;
+
+/***********************
+ * INIT *
+ ***********************/
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("usuarioLogado").innerText =
-    localStorage.getItem("usuario") || "";
+    localStorage.getItem("usuario") || "Usuário";
 
   renderizarLista();
 });
 
-/* =========================
-   SCANNER REAL (BarcodeDetector)
-========================= */
+/***********************
+ * LOGOUT *
+ ***********************/
+function logout() {
+  localStorage.clear();
+  window.location.href = "index.html";
+}
+
+/***********************
+ * SCANNER REAL (CAMERA)
+ ***********************/
 async function iniciarScanner() {
   if (!("BarcodeDetector" in window)) {
-    alert("Scanner não suportado neste navegador");
+    alert("Scanner não suportado neste navegador.");
     return;
   }
 
   detector = new BarcodeDetector({
-    formats: ["ean_13", "ean_8"]
+    formats: ["ean_13", "ean_8", "upc_a", "upc_e"]
   });
 
-  const video = document.getElementById("video");
-
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment" }
-    });
-
-    video.srcObject = stream;
-    await video.play();
-
-    requestAnimationFrame(scanLoop);
-  } catch (e) {
-    alert("Erro ao acessar a câmera");
-  }
-}
-
-async function scanLoop() {
-  if (!detector) return;
+  const scanner = document.getElementById("scanner");
+  scanner.innerHTML = `<video id="video" autoplay playsinline></video>`;
 
   const video = document.getElementById("video");
 
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" }
+  });
+
+  video.srcObject = stream;
+
+  const scanLoop = async () => {
+    if (!video.videoWidth) {
+      requestAnimationFrame(scanLoop);
+      return;
+    }
+
+    try {
+      const barcodes = await detector.detect(video);
+      if (barcodes.length > 0) {
+        const codigo = barcodes[0].rawValue;
+        pararScanner();
+        buscarProduto(codigo);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     requestAnimationFrame(scanLoop);
-    return;
-  }
+  };
 
-  const codigos = await detector.detect(video);
-
-  if (codigos.length > 0) {
-    const codigo = codigos[0].rawValue;
-    pararScanner();
-    buscarProduto(codigo);
-    return;
-  }
-
-  requestAnimationFrame(scanLoop);
+  scanLoop();
 }
 
 function pararScanner() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
+  const video = document.getElementById("video");
+  if (video && video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
   }
+  document.getElementById("scanner").innerHTML = "";
 }
 
-/* =========================
-   DIGITAR CÓDIGO MANUAL
-========================= */
-function digitarCodigo() {
-  const codigo = prompt("Digite o código de barras (EAN):");
-
-  if (!codigo) return;
-
-  if (!/^\d{8,13}$/.test(codigo)) {
-    alert("Código inválido");
-    return;
-  }
-
-  buscarProduto(codigo);
+/***********************
+ * ENTRADA MANUAL
+ ***********************/
+function buscarManual() {
+  const codigo = prompt("Digite o código de barras:");
+  if (codigo) buscarProduto(codigo.trim());
 }
 
-/* =========================
-   BUSCAR PRODUTO (API EAN)
-========================= */
+/***********************
+ * BUSCAR PRODUTO (API)
+ ***********************/
 async function buscarProduto(codigo) {
   try {
     const [imgRes, descRes] = await Promise.all([
-      fetch(`http://www.eanpictures.com.br:9000/api/gtin/${codigo}`),
-      fetch(`http://www.eanpictures.com.br:9000/api/descricao/${codigo}`)
+      fetch(`${PROXY_BASE}?tipo=gtin&codigo=${codigo}`),
+      fetch(`${PROXY_BASE}?tipo=descricao&codigo=${codigo}`)
     ]);
 
     const imagem = imgRes.ok ? await imgRes.text() : "";
@@ -99,20 +107,21 @@ async function buscarProduto(codigo) {
 
     adicionarProduto(codigo, descricao, imagem);
 
-  } catch (e) {
+  } catch (err) {
     alert("Erro ao consultar a API");
+    console.error(err);
   }
 }
 
-/* =========================
-   LISTA
-========================= */
+/***********************
+ * ADICIONAR PRODUTO
+ ***********************/
 function adicionarProduto(codigo, descricao, imagem) {
   produtos.push({
     codigo,
     descricao,
     imagem,
-    quantidade: "",
+    quantidade: 1,
     validade: ""
   });
 
@@ -120,6 +129,9 @@ function adicionarProduto(codigo, descricao, imagem) {
   renderizarLista();
 }
 
+/***********************
+ * RENDERIZAR LISTA
+ ***********************/
 function renderizarLista() {
   const tbody = document.getElementById("listaProdutos");
   tbody.innerHTML = "";
@@ -133,19 +145,15 @@ function renderizarLista() {
         ${p.descricao}
       </td>
       <td>
-        <input type="number" class="form-control"
-          value="${p.quantidade}"
-          onchange="atualizar(${i}, 'quantidade', this.value)">
+        <input type="number" min="1" value="${p.quantidade}"
+          onchange="atualizarQtd(${i}, this.value)">
       </td>
       <td>
-        <input type="date" class="form-control"
-          value="${p.validade}"
-          onchange="atualizar(${i}, 'validade', this.value)">
+        <input type="date" value="${p.validade}"
+          onchange="atualizarValidade(${i}, this.value)">
       </td>
       <td>
-        <button class="btn btn-danger btn-sm" onclick="remover(${i})">
-          ✕
-        </button>
+        <button class="btn btn-danger btn-sm" onclick="remover(${i})">X</button>
       </td>
     `;
 
@@ -153,8 +161,16 @@ function renderizarLista() {
   });
 }
 
-function atualizar(i, campo, valor) {
-  produtos[i][campo] = valor;
+/***********************
+ * ATUALIZAÇÕES
+ ***********************/
+function atualizarQtd(i, v) {
+  produtos[i].quantidade = v;
+  salvar();
+}
+
+function atualizarValidade(i, v) {
+  produtos[i].validade = v;
   salvar();
 }
 
@@ -164,40 +180,37 @@ function remover(i) {
   renderizarLista();
 }
 
+/***********************
+ * SALVAR LOCAL
+ ***********************/
 function salvar() {
   localStorage.setItem("produtos", JSON.stringify(produtos));
 }
 
-/* =========================
-   PDF
-========================= */
+/***********************
+ * EXPORTAR PDF
+ ***********************/
 function exportarPDF() {
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF();
+  const doc = new jsPDF();
 
-  pdf.setFontSize(14);
-  pdf.text("Controle de Validades", 10, 10);
+  doc.setFontSize(14);
+  doc.text("Controle de Validades", 10, 10);
 
   let y = 20;
 
-  produtos.forEach(p => {
-    pdf.setFontSize(10);
-    pdf.text(`Produto: ${p.descricao}`, 10, y);
-    pdf.text(`Qtd: ${p.quantidade} | Validade: ${p.validade}`, 10, y + 6);
-    y += 15;
+  produtos.forEach((p, i) => {
+    doc.setFontSize(10);
+    doc.text(
+      `${i + 1}. ${p.descricao} | Qtd: ${p.quantidade} | Val: ${p.validade || "-"}`,
+      10,
+      y
+    );
+    y += 8;
   });
 
-  pdf.save("controle-validade.pdf");
+  doc.save("controle-validade.pdf");
 }
-
-/* =========================
-   LOGOUT
-========================= */
-function logout() {
-  localStorage.clear();
-  window.location.href = "index.html";
-}
-
 
 
 
