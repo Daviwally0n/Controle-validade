@@ -29,7 +29,7 @@ function logout() {
 }
 
 /***********************
- * SCANNER REAL (CAMERA)
+ * SCANNER (CÂMERA)
  ***********************/
 async function iniciarScanner() {
   if (!("BarcodeDetector" in window)) {
@@ -42,7 +42,7 @@ async function iniciarScanner() {
   });
 
   const scanner = document.getElementById("scanner");
-  scanner.innerHTML = `<video id="video" autoplay playsinline></video>`;
+  scanner.innerHTML = `<video id="video" autoplay playsinline class="w-100" style="max-height:300px"></video>`;
 
   const video = document.getElementById("video");
 
@@ -95,7 +95,7 @@ function pararScanner() {
  ***********************/
 function digitarCodigo() {
   const codigo = prompt("Digite o código de barras:");
-  if (codigo && codigo.trim().length > 0) {
+  if (codigo && codigo.trim()) {
     buscarProduto(codigo.trim());
   }
 }
@@ -177,7 +177,7 @@ function renderizarLista() {
  * ATUALIZAÇÕES
  ***********************/
 function atualizarQtd(i, v) {
-  produtos[i].quantidade = v;
+  produtos[i].quantidade = Number(v);
   salvar();
 }
 
@@ -223,6 +223,7 @@ function exportarPDF() {
 
   doc.save("controle-validade.pdf");
 }
+
 
 
 
