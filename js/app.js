@@ -1,5 +1,6 @@
-let scannerAtivo = false;
 let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+let detector;
+let stream;
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("usuarioLogado").innerText =
@@ -9,58 +10,80 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* =========================
-   SCANNER REAL (QUAGGA)
+   SCANNER REAL (BarcodeDetector)
 ========================= */
-function iniciarScanner() {
-  if (scannerAtivo) return;
+async function iniciarScanner() {
+  if (!("BarcodeDetector" in window)) {
+    alert("Scanner não suportado neste navegador");
+    return;
+  }
 
-  scannerAtivo = true;
-
-  const scanner = document.getElementById("scanner");
-  scanner.innerHTML = "";
-  scanner.style.height = "300px";
-
-  Quagga.init({
-    inputStream: {
-      type: "LiveStream",
-      target: scanner,
-      constraints: {
-        facingMode: "environment",
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      }
-    },
-    locator: {
-      patchSize: "medium",
-      halfSample: true
-    },
-    decoder: {
-      readers: ["ean_reader", "ean_13_reader"]
-    },
-    locate: true
-  }, err => {
-    if (err) {
-      alert("Erro ao acessar a câmera");
-      scannerAtivo = false;
-      return;
-    }
-    Quagga.start();
+  detector = new BarcodeDetector({
+    formats: ["ean_13", "ean_8"]
   });
 
-  Quagga.onDetected(dados => {
-    const codigo = dados.codeResult.code;
+  const video = document.getElementById("video");
 
-    if (codigo.length < 8) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
 
-    Quagga.stop();
-    scannerAtivo = false;
+    video.srcObject = stream;
+    await video.play();
 
+    requestAnimationFrame(scanLoop);
+  } catch (e) {
+    alert("Erro ao acessar a câmera");
+  }
+}
+
+async function scanLoop() {
+  if (!detector) return;
+
+  const video = document.getElementById("video");
+
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+    requestAnimationFrame(scanLoop);
+    return;
+  }
+
+  const codigos = await detector.detect(video);
+
+  if (codigos.length > 0) {
+    const codigo = codigos[0].rawValue;
+    pararScanner();
     buscarProduto(codigo);
-  });
+    return;
+  }
+
+  requestAnimationFrame(scanLoop);
+}
+
+function pararScanner() {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+  }
 }
 
 /* =========================
-   BUSCA PRODUTO (EAN API)
+   DIGITAR CÓDIGO MANUAL
+========================= */
+function digitarCodigo() {
+  const codigo = prompt("Digite o código de barras (EAN):");
+
+  if (!codigo) return;
+
+  if (!/^\d{8,13}$/.test(codigo)) {
+    alert("Código inválido");
+    return;
+  }
+
+  buscarProduto(codigo);
+}
+
+/* =========================
+   BUSCAR PRODUTO (API EAN)
 ========================= */
 async function buscarProduto(codigo) {
   try {
@@ -70,17 +93,19 @@ async function buscarProduto(codigo) {
     ]);
 
     const imagem = imgRes.ok ? await imgRes.text() : "";
-    const descricao = descRes.ok ? await descRes.text() : "Produto não identificado";
+    const descricao = descRes.ok
+      ? await descRes.text()
+      : "Produto não identificado";
 
     adicionarProduto(codigo, descricao, imagem);
 
   } catch (e) {
-    alert("Erro ao consultar produto");
+    alert("Erro ao consultar a API");
   }
 }
 
 /* =========================
-   ADICIONAR PRODUTO
+   LISTA
 ========================= */
 function adicionarProduto(codigo, descricao, imagem) {
   produtos.push({
@@ -95,9 +120,6 @@ function adicionarProduto(codigo, descricao, imagem) {
   renderizarLista();
 }
 
-/* =========================
-   RENDERIZA LISTA
-========================= */
 function renderizarLista() {
   const tbody = document.getElementById("listaProdutos");
   tbody.innerHTML = "";
@@ -131,9 +153,6 @@ function renderizarLista() {
   });
 }
 
-/* =========================
-   ATUALIZA / REMOVE
-========================= */
 function atualizar(i, campo, valor) {
   produtos[i][campo] = valor;
   salvar();
@@ -150,7 +169,7 @@ function salvar() {
 }
 
 /* =========================
-   PDF PROFISSIONAL
+   PDF
 ========================= */
 function exportarPDF() {
   const { jsPDF } = window.jspdf;
@@ -178,4 +197,7 @@ function logout() {
   localStorage.clear();
   window.location.href = "index.html";
 }
+
+
+
 
