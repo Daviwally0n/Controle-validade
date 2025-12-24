@@ -12,7 +12,7 @@
   <!-- CSS -->
   <link rel="stylesheet" href="css/bootstrap.min.css">
 
-  <!-- Proteção simples (login local) -->
+  <!-- Proteção simples -->
   <script>
     if (localStorage.getItem("auth") !== "true") {
       window.location.href = "index.html";
@@ -40,12 +40,19 @@
     Usuário: <strong id="usuarioLogado"></strong>
   </p>
 
-  <!-- SCANNER -->
-  <div class="text-center my-3">
-    <button class="btn btn-primary" onclick="iniciarScanner()">📷 Escanear Produto</button>
+  <!-- AÇÕES -->
+  <div class="text-center my-3 d-flex justify-content-center gap-2 flex-wrap">
+    <button class="btn btn-primary" onclick="iniciarScanner()">
+      📷 Escanear Produto
+    </button>
+
+    <button class="btn btn-secondary" onclick="digitarCodigo()">
+      📝 Digitar Código
+    </button>
   </div>
 
-  <div id="scanner" class="mb-3"></div>
+  <!-- CAMERA -->
+  <video id="video" class="w-100 mb-3" style="max-height:300px" autoplay muted playsinline></video>
 
   <!-- LISTA -->
   <div class="table-responsive bg-white rounded">
@@ -62,13 +69,11 @@
     </table>
   </div>
 
-  <!-- EXPORTAR -->
   <button class="btn btn-success btn-block mt-3" onclick="exportarPDF()">
     Exportar PDF
   </button>
 
-  <!-- LIBS -->
-  <script src="https://unpkg.com/quagga/dist/quagga.min.js"></script>
+  <!-- PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- APP -->
@@ -77,24 +82,12 @@
   <!-- SERVICE WORKER -->
   <script>
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js")
-        .then(() => console.log("Service Worker registrado"))
-        .catch(err => console.error("Erro no SW:", err));
-    }
-  </script>
-
-  <!-- LOGOUT LOCAL -->
-  <script>
-    document.getElementById("usuarioLogado").innerText =
-      localStorage.getItem("usuario") || "";
-
-    function logout() {
-      localStorage.removeItem("auth");
-      localStorage.removeItem("usuario");
-      window.location.href = "index.html";
+      navigator.serviceWorker.register("sw.js");
     }
   </script>
 
 </body>
 </html>
+
+
 
