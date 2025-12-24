@@ -13,9 +13,10 @@ let detector = null;
  * INIT *
  ***********************/
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("usuarioLogado").innerText =
-    localStorage.getItem("usuario") || "Usuário";
-
+  const userEl = document.getElementById("usuarioLogado");
+  if (userEl) {
+    userEl.innerText = localStorage.getItem("usuario") || "Usuário";
+  }
   renderizarLista();
 });
 
@@ -32,7 +33,7 @@ function logout() {
  ***********************/
 async function iniciarScanner() {
   if (!("BarcodeDetector" in window)) {
-    alert("Scanner não suportado neste navegador.");
+    alert("Este navegador não suporta leitura por câmera.");
     return;
   }
 
@@ -45,33 +46,40 @@ async function iniciarScanner() {
 
   const video = document.getElementById("video");
 
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment" }
-  });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
+    });
 
-  video.srcObject = stream;
+    video.srcObject = stream;
 
-  const scanLoop = async () => {
-    if (!video.videoWidth) {
-      requestAnimationFrame(scanLoop);
-      return;
-    }
-
-    try {
-      const barcodes = await detector.detect(video);
-      if (barcodes.length > 0) {
-        const codigo = barcodes[0].rawValue;
-        pararScanner();
-        buscarProduto(codigo);
+    const scanLoop = async () => {
+      if (!video.videoWidth) {
+        requestAnimationFrame(scanLoop);
+        return;
       }
-    } catch (e) {
-      console.error(e);
-    }
 
-    requestAnimationFrame(scanLoop);
-  };
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          const codigo = barcodes[0].rawValue;
+          pararScanner();
+          buscarProduto(codigo);
+          return;
+        }
+      } catch (e) {
+        console.error("Erro no detector:", e);
+      }
 
-  scanLoop();
+      requestAnimationFrame(scanLoop);
+    };
+
+    scanLoop();
+
+  } catch (err) {
+    alert("Não foi possível acessar a câmera.");
+    console.error(err);
+  }
 }
 
 function pararScanner() {
@@ -85,9 +93,11 @@ function pararScanner() {
 /***********************
  * ENTRADA MANUAL
  ***********************/
-function buscarManual() {
+function digitarCodigo() {
   const codigo = prompt("Digite o código de barras:");
-  if (codigo) buscarProduto(codigo.trim());
+  if (codigo && codigo.trim().length > 0) {
+    buscarProduto(codigo.trim());
+  }
 }
 
 /***********************
@@ -108,7 +118,7 @@ async function buscarProduto(codigo) {
     adicionarProduto(codigo, descricao, imagem);
 
   } catch (err) {
-    alert("Erro ao consultar a API");
+    alert("Erro ao consultar a API.");
     console.error(err);
   }
 }
@@ -134,6 +144,8 @@ function adicionarProduto(codigo, descricao, imagem) {
  ***********************/
 function renderizarLista() {
   const tbody = document.getElementById("listaProdutos");
+  if (!tbody) return;
+
   tbody.innerHTML = "";
 
   produtos.forEach((p, i) => {
@@ -211,6 +223,7 @@ function exportarPDF() {
 
   doc.save("controle-validade.pdf");
 }
+
 
 
 
