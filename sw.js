@@ -1,24 +1,60 @@
-const CACHE = "validades-v1";
+const CACHE = "validades-v2";
 
 const FILES = [
-  "/",
-  "/index.html",
-  "/app.html",
-  "/css/style.css",
-  "/css/bootstrap.min.css",
-  "/js/app.js",
-  "/js/login.js",
-  "/js/alertify.js"
+  "./index.html",
+  "./app.html",
+  "./css/bootstrap.min.css",
+  "./js/app.js",
+  "./js/login.js"
 ];
 
-self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(FILES))
+// INSTALL
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(CACHE).then(async cache => {
+      for (const file of FILES) {
+        try {
+          const response = await fetch(file, { cache: "no-cache" });
+          if (response.ok) {
+            await cache.put(file, response);
+          }
+        } catch (e) {
+          // ignora arquivos que falharem
+        }
+      }
+    })
   );
+  self.skipWaiting();
 });
 
-self.addEventListener("fetch", e => {
-  e.respondWith(
-    caches.match(e.request).then(resp => resp || fetch(e.request))
+// ACTIVATE
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.map(key => {
+          if (key !== CACHE) {
+            return caches.delete(key);
+          }
+        })
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+// FETCH
+self.addEventListener("fetch", event => {
+  const url = event.request.url;
+
+  // NUNCA interceptar API
+  if (url.includes("/api/")) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then(resp => {
+      return resp || fetch(event.request);
+    })
   );
 });
