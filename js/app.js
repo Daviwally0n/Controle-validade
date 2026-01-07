@@ -42,7 +42,9 @@ async function iniciarScanner() {
   });
 
   const scanner = document.getElementById("scanner");
-  scanner.innerHTML = `<video id="video" autoplay playsinline class="w-100" style="max-height:300px"></video>`;
+  scanner.innerHTML = `
+    <video id="video" autoplay playsinline class="w-100" style="max-height:300px"></video>
+  `;
 
   const video = document.getElementById("video");
 
@@ -84,7 +86,7 @@ async function iniciarScanner() {
 
 function pararScanner() {
   const video = document.getElementById("video");
-  if (video && video.srcObject) {
+  if (video?.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
   }
   document.getElementById("scanner").innerHTML = "";
@@ -101,24 +103,22 @@ function digitarCodigo() {
 }
 
 /***********************
- * BUSCAR PRODUTO (API)
+ * BUSCAR PRODUTO (SCRAPING VIA PROXY)
  ***********************/
 async function buscarProduto(codigo) {
   try {
-    const [imgRes, descRes] = await Promise.all([
-      fetch(`${PROXY_BASE}?tipo=gtin&codigo=${codigo}`),
-      fetch(`${PROXY_BASE}?tipo=descricao&codigo=${codigo}`)
-    ]);
+    const res = await fetch(
+      `${PROXY_BASE}?tipo=descricao&codigo=${codigo}`
+    );
 
-    const imagem = imgRes.ok ? await imgRes.text() : "";
-    const descricao = descRes.ok
-      ? await descRes.text()
+    const descricao = res.ok
+      ? (await res.text()).trim()
       : "Produto não identificado";
 
-    adicionarProduto(codigo, descricao, imagem);
+    adicionarProduto(codigo, descricao);
 
   } catch (err) {
-    alert("Erro ao consultar a API.");
+    alert("Erro ao consultar o produto.");
     console.error(err);
   }
 }
@@ -126,11 +126,10 @@ async function buscarProduto(codigo) {
 /***********************
  * ADICIONAR PRODUTO
  ***********************/
-function adicionarProduto(codigo, descricao, imagem) {
+function adicionarProduto(codigo, descricao) {
   produtos.push({
     codigo,
     descricao,
-    imagem,
     quantidade: 1,
     validade: ""
   });
@@ -153,8 +152,8 @@ function renderizarLista() {
 
     tr.innerHTML = `
       <td>
-        ${p.imagem ? `<img src="${p.imagem}" width="60"><br>` : ""}
-        ${p.descricao}
+        <strong>${p.descricao}</strong><br>
+        <small class="text-muted">EAN: ${p.codigo}</small>
       </td>
       <td>
         <input type="number" min="1" value="${p.quantidade}"
@@ -223,6 +222,7 @@ function exportarPDF() {
 
   doc.save("controle-validade.pdf");
 }
+
 
 
 
