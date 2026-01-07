@@ -1,10 +1,9 @@
-const CACHE = "validades-v2";
+const CACHE = "validades-v3";
 
 const FILES = [
   "./index.html",
   "./app.html",
   "./css/bootstrap.min.css",
- // "./js/app.js",
   "./js/login.js"
 ];
 
@@ -18,9 +17,7 @@ self.addEventListener("install", event => {
           if (response.ok) {
             await cache.put(file, response);
           }
-        } catch (e) {
-          // ignora arquivos que falharem
-        }
+        } catch {}
       }
     })
   );
@@ -47,9 +44,8 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const url = event.request.url;
 
-  // NUNCA interceptar API
-  if (url.includes("/api/")) {
-    return;
+  if (url.endsWith("/js/app.js")) {
+    return; // SEMPRE da rede
   }
 
   event.respondWith(
@@ -58,4 +54,5 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
 
