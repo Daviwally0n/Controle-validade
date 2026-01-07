@@ -36,6 +36,7 @@
     <button class="btn btn-danger btn-sm" onclick="logout()">Sair</button>
   </div>
 
+  <!-- USUÁRIO -->
   <p class="text-light">
     Usuário: <strong id="usuarioLogado"></strong>
   </p>
@@ -49,6 +50,10 @@
     <button class="btn btn-secondary" onclick="digitarCodigo()">
       📝 Digitar Código
     </button>
+
+    <button class="btn btn-success" onclick="exportarPDF()">
+      📄 Exportar PDF
+    </button>
   </div>
 
   <!-- SCANNER -->
@@ -56,27 +61,25 @@
 
   <!-- LISTA -->
   <div class="table-responsive bg-white rounded">
-    <table class="table table-bordered mb-0">
+    <table class="table table-bordered mb-0 align-middle">
       <thead class="thead-dark">
         <tr>
-          <th>Produto</th>
-          <th>Qtd</th>
-          <th>Validade</th>
-          <th>Ação</th>
+          <th>Código</th>
+          <th>Descrição</th>
+          <th style="width:80px">Qtd</th>
+          <th style="width:140px">Validade</th>
+          <th style="width:140px">Ação</th>
+          <th style="width:70px">Excluir</th>
         </tr>
       </thead>
       <tbody id="listaProdutos"></tbody>
     </table>
   </div>
 
-  <button class="btn btn-success btn-block mt-3" onclick="exportarPDF()">
-    Exportar PDF
-  </button>
-
   <!-- RODAPÉ -->
   <footer class="text-center mt-4 text-light">
-    <img src="images/edw.png" width="50" height="50" alt="E-DW">
-    <p class="mt-2 mb-0">Produzido por Sistema E-DW forms</p>
+    <img src="images/logo.png" width="50" height="50" alt="E-DW">
+    <p class="mt-2 mb-0">Produzido por Sistema E-DW Forms</p>
   </footer>
 
   <!-- PDF -->
