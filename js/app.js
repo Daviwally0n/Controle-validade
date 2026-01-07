@@ -1,16 +1,11 @@
 /***********************
- * CONFIGURAÇÃO PROXY *
- ***********************/
-const PROXY_BASE = "https://ean-proxy.vercel.app/api/ean";
-
-/***********************
- * ESTADO GLOBAL *
+ * ESTADO GLOBAL
  ***********************/
 let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
 let detector = null;
 
 /***********************
- * INIT *
+ * INIT
  ***********************/
 document.addEventListener("DOMContentLoaded", () => {
   const userEl = document.getElementById("usuarioLogado");
@@ -21,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /***********************
- * LOGOUT *
+ * LOGOUT
  ***********************/
 function logout() {
   localStorage.clear();
@@ -42,9 +37,7 @@ async function iniciarScanner() {
   });
 
   const scanner = document.getElementById("scanner");
-  scanner.innerHTML = `
-    <video id="video" autoplay playsinline class="w-100" style="max-height:300px"></video>
-  `;
+  scanner.innerHTML = `<video id="video" autoplay playsinline class="w-100" style="max-height:300px"></video>`;
 
   const video = document.getElementById("video");
 
@@ -61,26 +54,19 @@ async function iniciarScanner() {
         return;
       }
 
-      try {
-        const barcodes = await detector.detect(video);
-        if (barcodes.length > 0) {
-          const codigo = barcodes[0].rawValue;
-          pararScanner();
-          buscarProduto(codigo);
-          return;
-        }
-      } catch (e) {
-        console.error("Erro no detector:", e);
+      const barcodes = await detector.detect(video);
+      if (barcodes.length > 0) {
+        const codigo = barcodes[0].rawValue;
+        pararScanner();
+        processarCodigo(codigo);
+      } else {
+        requestAnimationFrame(scanLoop);
       }
-
-      requestAnimationFrame(scanLoop);
     };
 
     scanLoop();
-
-  } catch (err) {
+  } catch {
     alert("Não foi possível acessar a câmera.");
-    console.error(err);
   }
 }
 
@@ -97,42 +83,30 @@ function pararScanner() {
  ***********************/
 function digitarCodigo() {
   const codigo = prompt("Digite o código de barras:");
-  if (codigo && codigo.trim()) {
-    buscarProduto(codigo.trim());
+  if (codigo?.trim()) {
+    processarCodigo(codigo.trim());
   }
 }
 
 /***********************
- * BUSCAR PRODUTO (SCRAPING VIA PROXY)
+ * PROCESSAR CÓDIGO
  ***********************/
-async function buscarProduto(codigo) {
-  try {
-    const res = await fetch(
-      `${PROXY_BASE}?tipo=descricao&codigo=${codigo}`
-    );
+function processarCodigo(codigo) {
+  const existente = produtos.find(p => p.codigo === codigo);
 
-    const descricao = res.ok
-      ? (await res.text()).trim()
-      : "Produto não identificado";
+  if (existente) {
+    produtos.push({ ...existente });
+  } else {
+    const descricao = prompt("Digite a descrição do produto:");
+    if (!descricao) return;
 
-    adicionarProduto(codigo, descricao);
-
-  } catch (err) {
-    alert("Erro ao consultar o produto.");
-    console.error(err);
+    produtos.push({
+      codigo,
+      descricao,
+      quantidade: 1,
+      validade: ""
+    });
   }
-}
-
-/***********************
- * ADICIONAR PRODUTO
- ***********************/
-function adicionarProduto(codigo, descricao) {
-  produtos.push({
-    codigo,
-    descricao,
-    quantidade: 1,
-    validade: ""
-  });
 
   salvar();
   renderizarLista();
@@ -149,12 +123,8 @@ function renderizarLista() {
 
   produtos.forEach((p, i) => {
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
-      <td>
-        <strong>${p.descricao}</strong><br>
-        <small class="text-muted">EAN: ${p.codigo}</small>
-      </td>
+      <td>${p.descricao}<br><small>EAN: ${p.codigo}</small></td>
       <td>
         <input type="number" min="1" value="${p.quantidade}"
           onchange="atualizarQtd(${i}, this.value)">
@@ -167,9 +137,28 @@ function renderizarLista() {
         <button class="btn btn-danger btn-sm" onclick="remover(${i})">X</button>
       </td>
     `;
-
     tbody.appendChild(tr);
   });
+
+  renderizarRodape();
+}
+
+/***********************
+ * RODAPÉ
+ ***********************/
+function renderizarRodape() {
+  if (document.getElementById("rodape")) return;
+
+  const rodape = document.createElement("div");
+  rodape.id = "rodape";
+  rodape.className = "text-center text-light mt-4";
+
+  rodape.innerHTML = `
+    <img src="images/logo.png" width="50" height="50"><br>
+    <small>Produzido por Sistema E-DW Forms</small>
+  `;
+
+  document.body.appendChild(rodape);
 }
 
 /***********************
@@ -209,11 +198,10 @@ function exportarPDF() {
   doc.text("Controle de Validades", 10, 10);
 
   let y = 20;
-
   produtos.forEach((p, i) => {
     doc.setFontSize(10);
     doc.text(
-      `${i + 1}. ${p.descricao} | Qtd: ${p.quantidade} | Val: ${p.validade || "-"}`,
+      `${i + 1}. ${p.descricao} | EAN: ${p.codigo} | Qtd: ${p.quantidade} | Val: ${p.validade || "-"}`,
       10,
       y
     );
