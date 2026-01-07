@@ -4,7 +4,7 @@ const FILES = [
   "./index.html",
   "./app.html",
   "./css/bootstrap.min.css",
-  "./js/app.js",
+ // "./js/app.js",
   "./js/login.js"
 ];
 
@@ -58,3 +58,4 @@ self.addEventListener("fetch", event => {
     })
   );
 });
+
