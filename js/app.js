@@ -1,7 +1,7 @@
 /***********************
  * CONFIGURAÇÃO PROXY *
  ***********************/
-const PROXY_BASE = "https://ean-proxy.vercel.app/api/ean";
+const PROXY_BASE =  "https://ean-proxy-git-main-davi-s-projects-7cc56d7c.vercel.app/api/ean";
 
 /***********************
  * ESTADO GLOBAL *
@@ -222,6 +222,7 @@ function exportarPDF() {
 
   doc.save("controle-validade.pdf");
 }
+
 
 
 
