@@ -2,8 +2,6 @@
  * ESTADO GLOBAL
  ***********************/
 let produtos = JSON.parse(localStorage.getItem("produtos")) || [];
-let historicoDescricoes =
-  JSON.parse(localStorage.getItem("descricoes")) || [];
 let detector = null;
 
 /***********************
@@ -103,23 +101,15 @@ function processarCodigo(codigo) {
     acao: false
   });
 
-  if (!historicoDescricoes.includes(desc)) {
-    historicoDescricoes.push(desc);
-    localStorage.setItem("descricoes", JSON.stringify(historicoDescricoes));
-  }
-
   salvar();
   renderizarLista();
 }
 
 /***********************
- * AUTOCOMPLETE
+ * DESCRIÇÃO (SEM HISTÓRICO)
  ***********************/
 function pedirDescricao() {
-  const valor = prompt(
-    "Descrição do produto:\n\nSugestões:\n" +
-    historicoDescricoes.slice(-5).join("\n")
-  );
+  const valor = prompt("Descrição do produto:");
   return valor?.trim();
 }
 
@@ -227,6 +217,8 @@ function exportarPDF() {
 
   doc.save("controle-validade.pdf");
 }
+
+
 
 
 
